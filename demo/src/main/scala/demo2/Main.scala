@@ -2,7 +2,7 @@ package demo2
 
 import cats.data.{Reader, ReaderT}
 import cats.{Applicative, Defer}
-import cats.effect.{ExitCode, IO, IOApp, Resource, Sync, Timer}
+import cats.effect.{ExitCode, IO, IOApp, Resource, Sync, Temporal}
 
 import scala.concurrent.duration._
 
@@ -42,7 +42,7 @@ object Main extends IOApp {
   } yield ()
 
   def repeatWithFixDelay[A](delay: FiniteDuration, f: IO[A]): IO[Unit] =
-    f.flatMap(_ => Timer[IO].sleep(delay))
+    f.flatMap(_ => Temporal[IO].sleep(delay))
       .flatMap(_ => repeatWithFixDelay(delay, f))
 
   val sayHello = ReaderT[IO, String, Unit] { name =>
@@ -54,13 +54,6 @@ object Main extends IOApp {
   }
 
   type SayT[A] = ReaderT[IO, String, A]
-
-  val say: ReaderT[IO, String, Unit] = for {
-    _ <- sayHello
-    _ <- walk[SayT]
-    _ <- sayBy
-  } yield ()
-  say("Nick").unsafeRunSync()
 
   override def run(args: List[String]): IO[ExitCode] = {
     val appResource: Resource[IO, Unit] = for {
