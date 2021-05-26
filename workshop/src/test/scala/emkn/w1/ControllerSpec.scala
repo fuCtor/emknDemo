@@ -14,13 +14,13 @@ class ControllerSpec extends AnyFlatSpec with ScalaFutures with Matchers with Mo
   implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout = Span(2, Seconds), interval = Span(5, Millis))
 
   trait Context {
-    val repo: DataRepository[Eval] = mock[DataRepository[Eval]]
+    val repo: Repository[Eval, Data, String] = mock[Repository[Eval, Data, String]]
     implicit val printer: Printer[Eval] = mock[Printer[Eval]]
     val controller = new DataController(repo)
   }
 
   "DataController" should "add new item" in new Context {
-    repo.put _ expects Data("a", "b") returning Eval.Unit
+    repo.put _ expects ("a", Data("a", "b")) returning Eval.Unit
     controller(Add(Data("a", "b"))).value
   }
 

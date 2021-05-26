@@ -6,38 +6,36 @@ import cats.effect.kernel.Sync
 import java.util.concurrent.ConcurrentHashMap
 import scala.jdk.CollectionConverters._
 
-trait Repository[F[_], T, ID] {
-  def put(item: T): F[Unit]
+trait Repository[F[_], T, Id] {
+  def put(id:Id, item: T): F[Unit]
 
-  def get(id: ID): F[Option[T]]
+  def get(id: Id): F[Option[T]]
 
   def all(): F[List[T]]
 }
 
-trait DataRepository[F[_]] extends Repository[F, Data, String]
+class MemoryRepository[F[_]: Sync, T, Id] extends Repository[F, T, Id] {
 
-class MemoryDataRepository[F[_]: Sync] extends DataRepository[F] {
+  private[this] val storage = new ConcurrentHashMap[Id, T]()
 
-  private[this] val storage = new ConcurrentHashMap[String, Data]()
-
-  override def put(item: Data): F[Unit] = Sync[F].delay {
-    storage.put(item.key, item)
+  override def put(id:Id, item: T): F[Unit] = Sync[F].delay {
+    storage.put(id, item)
   }
 
-  override def get(key: String): F[Option[Data]] = Sync[F].delay {
+  override def get(key: Id): F[Option[T]] = Sync[F].delay {
     Option(storage.get(key))
   }
 
-  override def all(): F[List[Data]] = Sync[F].delay {
+  override def all(): F[List[T]] = Sync[F].delay {
     storage.values().asScala.toList
   }
 }
 
-class PersistentDataRepository[F[_]: Functor](storage: Storage[F, Data]) extends DataRepository[F] {
+class PersistentRepository[F[_]: Functor, T, Id](storage: Storage[F, T], getId: T => Id) extends Repository[F, T, Id] {
   import cats.syntax.functor._
-  override def put(item: Data): F[Unit] = storage.write(item)
+  override def put(id:Id, item: T): F[Unit] = storage.write(item)
 
-  override def get(key: String): F[Option[Data]] = storage.readAll.map(_.find(_.key == key))
+  override def get(id: Id): F[Option[T]] = storage.readAll.map(_.find(item => getId(item) == id))
 
-  override def all(): F[List[Data]] = storage.readAll
+  override def all(): F[List[T]] = storage.readAll
 }

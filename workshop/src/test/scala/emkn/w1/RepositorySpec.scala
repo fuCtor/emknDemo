@@ -9,21 +9,21 @@ import org.scalatest.matchers.should.Matchers
 class RepositorySpec extends AnyFlatSpec with Matchers with MockFactory {
 
   trait ContextA {
-    val repo = new MemoryDataRepository[IO]()
+    val repo = new MemoryRepository[IO, Data, String]()
   }
 
   trait ContextB {
     val storage = mock[Storage[IO, Data]]
-    val repo = new PersistentDataRepository(storage)
+    val repo = new PersistentRepository[IO, Data, String](storage, _.key)
   }
 
   "MemoryRepository" should "store item" in new ContextA {
-    repo.put(Data("foo", "bar")).map(_ => succeed)
+    repo.put("foo", Data("foo", "bar")).map(_ => succeed)
   }
 
   "MemoryRepository" should "return stored item" in new ContextA {
     val f = for {
-      _ <- repo.put(Data("foo", "bar"))
+      _ <- repo.put("foo", Data("foo", "bar"))
       item <- repo.get("foo")
     } yield item.map(_.key)
 
@@ -36,7 +36,7 @@ class RepositorySpec extends AnyFlatSpec with Matchers with MockFactory {
 
   "PersistentDataRepository" should "store item via storage" in new ContextB {
     storage.write _ expects Data("foo", "bar") returning IO.unit
-    repo.put(Data("foo", "bar")).map(_ => succeed).unsafeRunSync()
+    repo.put("foo", Data("foo", "bar")).map(_ => succeed).unsafeRunSync()
   }
 
   "PersistentDataRepository" should "return item stored item via storage" in new ContextB {
@@ -44,7 +44,7 @@ class RepositorySpec extends AnyFlatSpec with Matchers with MockFactory {
     (storage.readAll _).expects() returning IO(List(Data("foo", "bar")))
 
     val f = for {
-      _ <- repo.put(Data("foo", "bar"))
+      _ <- repo.put("foo", Data("foo", "bar"))
       item <- repo.get("foo")
     } yield item.map(_.key)
 

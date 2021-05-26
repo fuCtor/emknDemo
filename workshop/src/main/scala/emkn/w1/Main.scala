@@ -5,7 +5,7 @@ import cats.effect.{ExitCode, IO, IOApp}
 object Main extends IOApp {
   import Request._
 
-  val repo = new MemoryDataRepository[IO]
+  val repo = new MemoryRepository[IO, Data, String]
   implicit val printer = new ConsolePrinter[IO]
   val controller = new DataController(repo)
 

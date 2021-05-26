@@ -30,7 +30,7 @@ class ConsolePrinter[F[_]: Sync] extends Printer[F] {
   override def println(v: Any): F[Unit] = Sync[F].blocking(Console.println(v))
 }
 
-final class DataController[F[_]: Monad](storage: DataRepository[F])(implicit printer: Printer[F]) extends Controller[F, Request, Unit] {
+final class DataController[F[_]: Monad](storage: Repository[F, Data, String])(implicit printer: Printer[F]) extends Controller[F, Request, Unit] {
   import cats.syntax.flatMap._
   import cats.syntax.functor._
   import cats.syntax.traverse._
@@ -43,7 +43,7 @@ final class DataController[F[_]: Monad](storage: DataRepository[F])(implicit pri
           printer.println(p._2)
         ).void
       )
-    case Request.Add(item) => storage.put(item)
+    case Request.Add(item) => storage.put(item.key, item)
     case Request.Get(key) =>
       storage.get(key).flatMap {
         case Some(value) => printer.println(value)
